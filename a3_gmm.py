@@ -36,6 +36,16 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
 def log_b_m_X(m, X, myTheta):
     sigma = myTheta.Sigma[m]
     mu = myTheta.mu[m]
+    D = X.shape[1]
+
+    term1 = np.sum(np.multiply(np.square(mu), 0.5 * (1 / sigma)))
+    term2 = D / 2 * np.log(2 * np.pi)
+    term3 = 0.5 * np.log(np.prod(sigma))
+    inde = term1 + term2 + term3
+
+    dep = np.sum(-0.5 * np.multiply(np.square(X), 1 / sigma) + np.multiply(np.multiply(mu, X), 1 / sigma), axis=1)
+    res = dep - inde
+    return res
 
 
 def pre_compute(m, myTheta):
