@@ -22,41 +22,55 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
 
         As you'll see in tutorial, for efficiency, you can precompute something for 'm' that applies to all x outside of this function.
         If you do this, you pass that precomputed component in preComputedForM
-
     '''
-    return
-
-def log_b_m_X(m, X, myTheta, preCompytedForM=[]):
-    mu = myTheta.mu[m]
+    D = myTheta.mu.shape[1]
     sigma = myTheta.Sigma[m]
-    D = X.shape[1]
-    
-    # independent terms
-    term1 = 0.5 * np.sum(np.divide(np.square(mu), sigma))
-    term2 = D / 2 * np.log(np.pi)
-    term3 = 0.5 * np.log(np.prod(sigma))
-    indep = term1 + term2 + term3
+    mu = myTheta.mu[m]
 
-    # dependent term
-    dep = np.sum(-0.5 * np.divide(np.square(X), sigma) + np.divide(np.multiply(mu, X), sigma), axis=1)
+    term1 = np.sum(np.divide(np.square(x - mu), sigma), axis=1)
+    term2 = 0.5 * D * np.log(2 * np.pi)
+    term3 = 0.5 * np.sum(np.log(np.square(sigma)))
+    res = -term1 - term2 - term3
 
-    res = np.subtract(dep, indep)
     return res
 
+def log_b_m_X(X, myTheta):
+    ''' Vectorized version of log_b_m_x.
+    '''
+    T, D = X.shape[1]
+    M = myTheta.mu.shape[0]
+    log_Bs = np.zeros((M, T))
+
+    for m in range(M):
+        mu = myTheta.mu[m]
+        sigma = myTheta.Sigma[m]
+
+        term1 = np.sum(np.divide(np.square(X - mu), sigma), axis=1)
+        term2 = 0.5 * D * np.log(2 * np.pi)
+        term3 = 0.5 * np.sum(np.log(np.square(np.prod(sigma))))
+        res = -term1 - term2 - term3
+        log_Bs[m] = res
+
+    return log_Bs
 
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
-    return 
-
-
-def log_p_m_X(myTheta, log_Bs):
     omega = myTheta.omega
-    nume = np.add(log_Bs, np.log(omega))
-    deno = logsumexp(log_Bs, b=omega, axis=0)
-    res = np.subtract(nume, deno)
+    M = omega.shape[0]
+    log_Bs = np.array([log_b_m_x(i, x, myTheta) for i in range(M)])
+    nume = np.log(omega[m, 0]) + log_Bs[m]
+    deno = logsumexp(np.log(omega[:, 0]) + log_Bs)
+    res = nume - deno
     return res
+
+def log_p_m_X(log_Bs, myTheta):
+    omega = myTheta.omega
+    nume = log_Bs + np.log(omega)
+    deno = logsumexp(nume, axis=0)
+    log_Ps = nume - deno
+    return log_Ps
 
 def logLik( log_Bs, myTheta ):
     ''' Return the log likelihood of 'X' using model 'myTheta' and precomputed MxT matrix, 'log_Bs', of log_b_m_x
@@ -71,7 +85,7 @@ def logLik( log_Bs, myTheta ):
         See equation 3 of the handout
     '''
     omega = myTheta.omega
-    res = np.sum(logsumexp(log_Bs, b=omega, axis=0))
+    res = np.sum(logsumexp(log_Bs + np.log(omega), axis=0))
     return res
 
     
@@ -83,7 +97,7 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     T = X.shape[0]
     randX = np.random.choice(T, M, replace=False)
     myTheta.Sigma.fill(1)
-    myTheta.omega.fill(1 / M)
+    myTheta.omega[:, 0] = 1 / M
     for i in range(len(randX)):
         myTheta.mu[i] = X[randX[i]]
     
@@ -96,25 +110,28 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     # start loop
     while i <= maxIter and improvement >= epsilon:
         # compute intermediate results
-        for m in range(M):
-            log_Bs[m, :] = log_b_m_X(m, X, myTheta)
+        # for m in range(M):
+            # log_Bs[m, :] = log_b_m_X(m, X, myTheta)
+        log_Bs = log_b_m_X(X, myTheta)
+        log_Ps = log_p_m_X(log_Bs, myTheta)
         
         # compute likelihood
         L = logLik(log_Bs, myTheta)
 
         # update parameters
-        # omega
-        log_pmx = log_p_m_X(myTheta, log_Bs)
-        log_pmx_sum = np.exp(logsumexp(log_pmx, axis=1)).reshape(-1, 1)
-        myTheta.omega = np.divide(log_pmx_sum, T)
-        # mu
-        mu_nume = np.dot(np.exp(log_pmx), X)
-        myTheta.mu = np.divide(mu_nume, log_pmx_sum)
-        # sigma
-        sigma_term1_nume = np.dot(np.exp(log_pmx), np.square(X))
-        sigma_term1 = np.divide(sigma_term1_nume, log_pmx_sum)
-        sigma_term2 = np.square(myTheta.mu)
-        myTheta.Sigma = np.subtract(sigma_term1, sigma_term2)
+        for m in range(M):
+            # reuse term
+            sum_Ps = np.sum(np.exp(log_Ps[m]))
+
+            # omega
+            myTheta.omega[m] = np.divide(sum_Ps, T)
+            # mu
+            myTheta.mu[m] = np.divide(np.dot(np.exp(log_Ps[m]), X), sum_Ps)
+            # sigma
+            sigma_term1_nume = np.dot(np.exp(log_Ps[m]), np.square(X))
+            sigma_term1 = np.divide(sigma_term1_nume, sum_Ps)
+            sigma_term2 = np.square(myTheta.mu[m])
+            myTheta.Sigma[m] = np.subtract(sigma_term1, sigma_term2)
 
         # update loop
         improvement = L - prev_L
@@ -137,28 +154,32 @@ def test( mfcc, correctID, models, k=5 ):
                S-5A -9.21034037197
         the format of the log likelihood (number of decimal places, or exponent) does not matter
     '''
-    bestModel = -1
-    numSpeaker = len(models)
-    logLik = np.zeros((numSpeaker))
-    T = mfcc.shape[0]
+    models_likelihood = []
     M = models[0].omega.shape[0]
-    logBs = np.zeros((numSpeaker, M, T))
-    for i in range(numSpeaker):
-        for m in range(M):
-            logBs[i, m, :] = log_b_m_X(m, mfcc, models[i])
+    T = mfcc.shape[0]
+    d = mfcc.shape[1]
 
-    for i in range(numSpeaker):
-        logLik[i] = np.sum(logsumexp(logBs[i], b=models[i].omega, axis=0))
-    bestModel = np.argmax(logLik)
-    if k > 0:
-        topK = logLik.argsort()[-k:][::-1]
-        output = '{}\n'.format(models[correctID].name)
-        for i in range(k):
-            output += '{:5} {}\n'.format(models[int(topK[i])].name, logLik[int(topK[i])])
-        print(output)
-        with open('gmmLiks.txt', 'a') as f:
-            f.write(output)
+    bestModel = -1
+    bestLogLik = float('-inf')
 
+    for i in range(len(models)):
+        theta = models[i]
+        log_Bs = get_log_Bs(theta, mfcc, M, T, d)
+        log_Lik = logLik(log_Bs, theta)
+        models_likelihood.append((theta,log_Lik))
+
+        # best theta
+        if(log_Lik > bestLogLik):
+            bestLogLik = log_Lik
+            bestModel = i
+
+    # Find best k models
+    models_likelihood.sort(key=lambda x: x[1], reverse=True)
+    print(models[correctID].name)
+
+    for j in range(k):
+        print(models_likelihood[j][0].name, models_likelihood[j][1])
+    print('\n')
 
     return 1 if (bestModel == correctID) else 0
 
