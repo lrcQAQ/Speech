@@ -12,6 +12,7 @@ class theta:
         self.mu = np.zeros((M,d))
         self.Sigma = np.zeros((M,d))
 
+
 def log_b_m_x( m, x, myTheta, preComputedForM=[]):
     ''' Returns the log probability of d-dimensional vector x using only component m of model myTheta
         See equation 1 of the handout
