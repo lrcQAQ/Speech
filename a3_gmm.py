@@ -3,6 +3,9 @@ import numpy as np
 import os, fnmatch
 import random
 
+# packages
+from scipy.misc import logsumexp
+
 dataDir = '/u/cs401/A3/data/'
 
 class theta:
@@ -21,67 +24,40 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
         If you do this, you pass that precomputed component in preComputedForM
 
     '''
-    sigma = myTheta.Sigma[m]
-    mu = myTheta.mu[m]
-    d = mu.shape[1]
-    x_sum = 0
-    for n in range(d):
-        x_term1 =  0.5 * x[n]**2 / sigma[n]**2
-        x_term2 = mu[n] * x[n] / sigma[n]**2
-        x_sum = x_sum + x_term1 - x_term2
-    x_sum = -x_sum
-    x_sum = x_sum + preComputedForM
-    return x_sum
+    return
 
-def log_b_m_X(m, X, myTheta):
-    sigma = myTheta.Sigma[m]
+def log_b_m_X(m, X, myTheta, preCompytedForM=[]):
     mu = myTheta.mu[m]
+    sigma = myTheta.Sigma[m]
     D = X.shape[1]
-
-    term1 = np.sum(np.multiply(np.square(mu), 0.5 * (1 / sigma)))
-    term2 = D / 2 * np.log(2 * np.pi)
+    
+    # independent terms
+    term1 = 0.5 * np.sum(np.divide(np.square(mu), sigma))
+    term2 = D / 2 * np.log(np.pi)
     term3 = 0.5 * np.log(np.prod(sigma))
-    inde = term1 + term2 + term3
+    indep = term1 + term2 + term3
 
-    dep = np.sum(-0.5 * np.multiply(np.square(X), 1 / sigma) + np.multiply(np.multiply(mu, X), 1 / sigma), axis=1)
-    res = dep - inde
+    # dependent term
+    dep = np.sum(-0.5 * np.divide(np.square(X), sigma) + np.divide(np.multiply(mu, X), sigma), axis=1)
+
+    res = np.subtract(dep, indep)
     return res
 
-
-def pre_compute(m, myTheta):
-    sigma = myTheta.Sigma[m]
-    mu = myTheta.mu[m]
-    d = mu.shape[1]
-    term1 = 0
-    _term3 = 0
-    for n in range(13):
-        term1 += mu[n]**2 / (2 * sigma[n]**2)
-        _term3 = _term3 * (sigma[n]**2)
-    term2 = 0.5 * d * np.log(2 * np.pi)
-    term3 = 0.5 * np.log(_term3)
-    res = -(term1 + term2 + term3)
-    return res
 
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
-    pre_x = pre_compute(m, myTheta)
-    log_bmx = log_b_m_x(m, x, myTheta, pre_x)
-    omega = myTheta.omega[m]
-    M = omega.shape[0]
-    nume = omega * log_bmx
-    denom = 0
-    for k in range(M):
-        omega_k = myTheta.omega[k]
-        pre_x_k = pre_compute(k, myTheta)
-        log_bkx = log_b_m_x(k, x, myTheta, pre_x_k)
-        bxk = np.exp(log_bkx)
-        denom = denom * omega_k * bxk
-    res = np.log(nume / denom)
+    return 
+
+
+def log_p_m_X(myTheta, log_Bs):
+    omega = myTheta.omega
+    nume = np.add(log_Bs, np.log(omega))
+    deno = logsumexp(log_Bs, b=omega, axis=0)
+    res = np.subtract(nume, deno)
     return res
 
-    
 def logLik( log_Bs, myTheta ):
     ''' Return the log likelihood of 'X' using model 'myTheta' and precomputed MxT matrix, 'log_Bs', of log_b_m_x
 
@@ -94,13 +70,46 @@ def logLik( log_Bs, myTheta ):
 
         See equation 3 of the handout
     '''
-    print( 'TODO' )
+    omega = myTheta.omega
+    res = np.sum(logsumexp(log_Bs, b=omega, axis=0))
+    return res
 
     
 def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     ''' Train a model for the given speaker. Returns the theta (omega, mu, sigma)'''
     myTheta = theta( speaker, M, X.shape[1] )
-    print ('TODO')
+    
+    # initialize paramters
+    randX = np.random.choice(X.shape[0], M, replace=False)
+    myTheta.Sigma.fill(1)
+    myTheta.omega.fill(1 / M)
+    for i in range(len(randX)):
+        myTheta.mu[i] = X[randX[i]]
+    
+    # initialize loop
+    i = 0
+    prev_L = float('-inf')
+    improvement = float('inf')
+
+    log_Bs = np.zeros((M, X.shape[0]))
+    # start loop
+    while i <= maxIter and improvement >= epsilon:
+        # compute intermediate results
+        for m in range(M):
+            log_Bs[m, :] = log_b_m_X(m, X, myTheta)
+        
+        # log likelihood
+        L = logLik(log_Bs, myTheta)
+
+        # update parameters
+        log_pmx = log_p_m_X(myTheta, log_Bs)
+        
+
+        # update loop
+        improvement = L - prev_L
+        prev_L = L
+        i += 1
+
     return myTheta
 
 
