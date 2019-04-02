@@ -138,7 +138,26 @@ def test( mfcc, correctID, models, k=5 ):
         the format of the log likelihood (number of decimal places, or exponent) does not matter
     '''
     bestModel = -1
+    numSpeaker = len(models)
+    logLik = np.zeros((numSpeaker))
+    T = mfcc.shape[0]
+    M = models[0].omega.shape[0]
+    logBs = np.zeros((numSpeaker, M, T))
+    for i in range(numSpeaker):
+        for m in range(M):
+            logBs[i, m, :] = log_b_m_X(m, mfcc, models[i])
 
+    for i in range(numSpeaker):
+        logLik[i] = np.sum(logsumexp(logBs[i], b=models[i].omega, axis=0))
+    bestModel = np.argmax(logLik)
+    if k > 0:
+        topK = logLik.argsort()[-k:][::-1]
+        output = '{}\n'.format(models[correctID].name)
+        for i in range(k):
+            output += '{:5} {}\n'.format(models[int(topK[i])].name, logLik[int(topK[i])])
+        print(output)
+        with open('gmmLiks.txt', 'a') as f:
+            f.write(output)
 
 
     return 1 if (bestModel == correctID) else 0
@@ -177,4 +196,5 @@ if __name__ == "__main__":
     for i in range(0,len(testMFCCs)):
         numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
     accuracy = 1.0*numCorrect/len(testMFCCs)
+    print("Accuracy: ", accuracy)
 
