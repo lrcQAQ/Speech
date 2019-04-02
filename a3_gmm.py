@@ -80,7 +80,8 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     myTheta = theta( speaker, M, X.shape[1] )
     
     # initialize paramters
-    randX = np.random.choice(X.shape[0], M, replace=False)
+    T = X.shape[0]
+    randX = np.random.choice(T, M, replace=False)
     myTheta.Sigma.fill(1)
     myTheta.omega.fill(1 / M)
     for i in range(len(randX)):
@@ -90,20 +91,30 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     i = 0
     prev_L = float('-inf')
     improvement = float('inf')
+    log_Bs = np.zeros((M, T))
 
-    log_Bs = np.zeros((M, X.shape[0]))
     # start loop
     while i <= maxIter and improvement >= epsilon:
         # compute intermediate results
         for m in range(M):
             log_Bs[m, :] = log_b_m_X(m, X, myTheta)
         
-        # log likelihood
+        # compute likelihood
         L = logLik(log_Bs, myTheta)
 
         # update parameters
+        # omega
         log_pmx = log_p_m_X(myTheta, log_Bs)
-        
+        log_pmx_sum = np.exp(logsumexp(log_pmx, axis=1)).reshape(-1, 1)
+        myTheta.omega = np.divide(log_pmx_sum, T)
+        # mu
+        mu_nume = np.dot(np.exp(log_pmx), X)
+        myTheta.mu = np.divide(mu_nume, log_pmx_sum)
+        # sigma
+        sigma_term1_nume = np.dot(np.exp(log_pmx), np.square(X))
+        sigma_term1 = np.divide(sigma_term1_nume, log_pmx_sum)
+        sigma_term2 = np.square(myTheta.mu)
+        myTheta.Sigma = np.subtract(sigma_term1, sigma_term2)
 
         # update loop
         improvement = L - prev_L
@@ -127,7 +138,9 @@ def test( mfcc, correctID, models, k=5 ):
         the format of the log likelihood (number of decimal places, or exponent) does not matter
     '''
     bestModel = -1
-    print ('TODO')
+
+
+
     return 1 if (bestModel == correctID) else 0
 
 
