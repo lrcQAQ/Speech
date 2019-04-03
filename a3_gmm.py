@@ -7,6 +7,8 @@ import random
 from scipy.misc import logsumexp
 
 dataDir = '/u/cs401/A3/data/'
+# dataDir = './subdata/'
+
 
 class theta:
     def __init__(self, name, M=8,d=13):
@@ -37,7 +39,7 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
 def log_b_m_X(X, myTheta):
     ''' Vectorized version of log_b_m_x.
     '''
-    T, D = X.shape[1]
+    T, D = X.shape
     M = myTheta.mu.shape[0]
     log_Bs = np.zeros((M, T))
 
@@ -87,8 +89,7 @@ def logLik( log_Bs, myTheta ):
     omega = myTheta.omega
     res = np.sum(logsumexp(log_Bs + np.log(omega), axis=0))
     return res
-
-    
+  
 def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     ''' Train a model for the given speaker. Returns the theta (omega, mu, sigma)'''
     myTheta = theta( speaker, M, X.shape[1] )
@@ -97,7 +98,7 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     T = X.shape[0]
     randX = np.random.choice(T, M, replace=False)
     myTheta.Sigma.fill(1)
-    myTheta.omega[:, 0] = 1 / M
+    myTheta.omega[:, 0] = 1.0 / M
     for i in range(len(randX)):
         myTheta.mu[i] = X[randX[i]]
     
@@ -110,8 +111,6 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     # start loop
     while i <= maxIter and improvement >= epsilon:
         # compute intermediate results
-        # for m in range(M):
-            # log_Bs[m, :] = log_b_m_X(m, X, myTheta)
         log_Bs = log_b_m_X(X, myTheta)
         log_Ps = log_p_m_X(log_Bs, myTheta)
         
@@ -120,7 +119,6 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
 
         # update parameters
         for m in range(M):
-            # reuse term
             sum_Ps = np.sum(np.exp(log_Ps[m]))
 
             # omega
@@ -140,7 +138,6 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
 
     return myTheta
 
-
 def test( mfcc, correctID, models, k=5 ):
     ''' Computes the likelihood of 'mfcc' in each model in 'models', where the correct model is 'correctID'
         If k>0, print to stdout the actual speaker and the k best likelihoods in this format:
@@ -154,32 +151,36 @@ def test( mfcc, correctID, models, k=5 ):
                S-5A -9.21034037197
         the format of the log likelihood (number of decimal places, or exponent) does not matter
     '''
-    models_likelihood = []
-    M = models[0].omega.shape[0]
-    T = mfcc.shape[0]
-    d = mfcc.shape[1]
-
     bestModel = -1
-    bestLogLik = float('-inf')
+    all_likelihood = np.zeros((len(models)))
+    best = float('-inf')
 
+    # calculate all likelihood and save the best
     for i in range(len(models)):
-        theta = models[i]
-        log_Bs = get_log_Bs(theta, mfcc, M, T, d)
-        log_Lik = logLik(log_Bs, theta)
-        models_likelihood.append((theta,log_Lik))
+        model = models[i]
+        log_Bs = log_b_m_X(mfcc, model)
+        likelihood = logLik(log_Bs, model)
+        all_likelihood[i] = likelihood
 
-        # best theta
-        if(log_Lik > bestLogLik):
-            bestLogLik = log_Lik
+        if(likelihood > best):
             bestModel = i
+            best = likelihood
+    
+    # k best models
+    top = np.argsort(-all_likelihood)
 
-    # Find best k models
-    models_likelihood.sort(key=lambda x: x[1], reverse=True)
-    print(models[correctID].name)
-
-    for j in range(k):
-        print(models_likelihood[j][0].name, models_likelihood[j][1])
-    print('\n')
+    # print to output
+    with open('gmmLiks.txt', 'a') as f:
+        title = models[correctID].name
+        print(title)
+        f.write(title)
+        f.write('\n')
+        for kk in range(k):
+            idx = top[kk]
+            output = str(models[idx].name) + ' ' + str(all_likelihood[idx])
+            print(output)
+            f.write(output)
+            f.write('\n')
 
     return 1 if (bestModel == correctID) else 0
 
