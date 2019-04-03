@@ -181,6 +181,7 @@ def test( mfcc, correctID, models, k=5 ):
             print(output)
             f.write(output)
             f.write('\n')
+        f.write('\n')
 
     return 1 if (bestModel == correctID) else 0
 
@@ -194,7 +195,7 @@ if __name__ == "__main__":
     k = 5  # number of top speakers to display, <= 0 if none
     M = 8
     epsilon = 0.0
-    maxIter = 20
+    maxIter = 10
     # train a model for each speaker, and reserve data for testing
     for subdir, dirs, files in os.walk(dataDir):
         for speaker in dirs:

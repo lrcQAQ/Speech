@@ -1,0 +1,25 @@
+------------------ Experiment 1: M ------------------
+Fix maxIter = 20, S = 32, change M to be [1, 2, 3, 5, 8, 10]
+
+M	Accuracy
+1	1.0
+2	0.9375
+3	0.96875
+5	1.0
+8	1.0
+10	1.0
+
+Discussion:
+For smaller M (number of Gaussian Mixtures), the result can be less accurate, but the amount penalized is small (<0.1), the result can still be considered good. The accuracy doesn't have a strong relation with accuracy.
+
+------------------ Experiment 2: maxIter ------------------
+Fix M = 8, S = 32, change maxIter to be [0, 2, 5, 8, 10]
+
+maxIter	Accuracy
+1	0.96875
+2	1.0
+5	1.0
+8	1.0
+10	1.0
+
+Discussion:

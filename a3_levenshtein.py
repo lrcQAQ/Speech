@@ -30,5 +30,25 @@ def Levenshtein(r, h):
     """
 
 
+
 if __name__ == "__main__":
-    print( 'TODO' ) 
+    google_wer = []
+    kaldi_wer = []
+
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print("Processing " + speaker)
+            # read in transcript files for such speaker
+            trans_path = os.path.join(dataDir, speaker, 'transcripts.txt')
+            google_path = os.path.join(dataDir, speaker, 'transcripts.Google.txt')
+            kaldi_path = os.path.join(dataDir, speaker, 'transcripts.Kaldi.txt')
+            trans = open(trans_path, 'r').readlines()
+            google = open(google_path, 'r').readlines()
+            kaldi = open(kaldi_path, 'r').readlines()
+
+            # for each line, we find its wer
+            lines = min(len(trans), len(google), len(kaldi))
+            for i in range(lines):
+                curr_trans, curr_google, curr_kaldi = trans[i], google[i], kaldi[i]
+                
+
