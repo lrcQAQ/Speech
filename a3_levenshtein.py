@@ -31,6 +31,39 @@ def Levenshtein(r, h):
     >>> wer("".split(), "who is there".split())                                 
     Inf 0 3 0                                                                           
     """
+    n = len(r)
+    m = len(h)
+    R = np.zeros((n + 1, m + 1)) # matrix of distances
+    B = np.zeros((n + 1, m + 1)) # backtracing matrix
+
+    # initialize R
+    R[:, 0] = np.arange(n + 1)
+    R[0, :] = np.arange(m + 1)
+
+    # statr loop
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            dele = R[i - 1, j] + 1
+            sub = R[i - 1, j - 1] if r[i - 1] == h[j - 1] else R[i - 1, j - 1] + 1
+            ins = R[i, j - 1] + 1
+            R[i, j] = min(dele, sub, ins)
+
+            if(R[i, j] == dele):
+                B[i, j] = 1 # up
+            elif(R[i, j] == ins):
+                B[i, j] = 2 # left
+            else:
+                B[i, j] = 3 # up-left
+            
+    # get wer
+    wer = R[n, m] / n
+
+    # get nS, nI, nD
+    
+
+    
+    return
+
 
 def preprocess(sent, trans=False):
     puncs = list(string.punctuation)
@@ -82,6 +115,7 @@ if __name__ == "__main__":
                         # calculate result for google
                         if(len(google) != 0):
                             curr_google = preprocess(google[i])
+                            Levenshtein(curr_trans, curr_google)
                             # g_wer, g_sub, g_ins, g_del = Levenshtein(curr_trans, curr_google)
                             # google_wer.append(g_wer)
                             # g_res = "Google result: wer " + str(g_wer) + " sub " + str(g_sub) + " ins " + str(g_ins) + " del " + str(g_del)
