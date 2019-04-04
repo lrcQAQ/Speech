@@ -32,7 +32,7 @@ def Levenshtein(r, h):
     Inf 0 3 0                                                                           
     """
 
-def preprocess(sent):
+def preprocess(sent, trans=False):
     puncs = list(string.punctuation)
     puncs.remove('[')
     puncs.remove(']')
@@ -42,9 +42,10 @@ def preprocess(sent):
     trans = sent[2:]
     trans = ' '.join(trans)
 
-    # remove <> 
-    pattern = re.compile("<.*?>")
-    trans = re.sub(pattern, '', trans)
+    # remove <> contents in transcripts
+    if(trans):
+        pattern = re.compile("<.*?>")
+        trans = re.sub(pattern, '', trans)
 
     # remove punctuations
     for punc in puncs:
@@ -76,7 +77,7 @@ if __name__ == "__main__":
                     print("===========Processing " + speaker + "===========")
                     lines = min(len(trans), len(google), len(kaldi))
                     for i in range(lines):
-                        curr_trans = preprocess(trans[i])
+                        curr_trans = preprocess(trans[i], True)
                         
                         # calculate result for google
                         if(len(google) != 0):
