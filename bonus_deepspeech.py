@@ -1,9 +1,12 @@
 '''
+Run on pretrained model to process wav file is really time consuming, so I only tried on subdataset.
+Result for S-11C:
+
+
 
 To run the code, need "pip3 install deepspeech"
 "wget https://github.com/mozilla/DeepSpeech/releases/download/v0.1.1/deepspeech-0.1.1-models.tar.gz"
 "tar -xvzf deepspeech-0.1.1-models.tar.gz"
-Tooks a long time.
 
 reference: https://progur.com/2018/02/how-to-use-mozilla-deepspeech-tutorial.html
 reference: https://github.com/mozilla/DeepSpeech#using-the-python-package

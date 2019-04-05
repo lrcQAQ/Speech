@@ -566,4 +566,6 @@ Google: mean is 0.3830513171665368, std is 0.1319417903027681
 Kaldi: mean is 0.25410452754676005, std is 0.11987035378735823
 
 Discussion:
-For Kaldi, I remove environment description such as [laugher] and [noise] in preprocess for consistency. However, there are still a lot of oral words such as "um", "mhm", "yeah", "ah", due to habit of speakers. Google tend to provide a more neat and shortened version, where it simply delete words unsure, and sometimes replace long difficult phrase into easy (and wrong) ones that's common seen.
+For Kaldi, I remove environment description such as [laugher] and [noise] in preprocess for consistency. However, there are still a lot of oral words such as "um", "mhm", "yeah", "ah", due to habit of speakers.
+Google has a larger mean wer, which indicate it's worse than Kaldi. Google tend to provide a more neat and shortened version, by deleting words unsure, and sometimes replace long difficult phrase with easy (and wrong) ones that's more common.
+
