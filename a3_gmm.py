@@ -4,7 +4,7 @@ import os, fnmatch
 import random
 
 # packages
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 
 dataDir = '/u/cs401/A3/data/'
 # dataDir = './subdata/'
@@ -25,50 +25,62 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
         As you'll see in tutorial, for efficiency, you can precompute something for 'm' that applies to all x outside of this function.
         If you do this, you pass that precomputed component in preComputedForM
     '''
+    # extract shape and parameters
     D = myTheta.mu.shape[1]
     sigma = myTheta.Sigma[m]
     mu = myTheta.mu[m]
 
+    # apply formula
     term1 = np.sum(np.divide(np.square(x - mu), sigma), axis=1)
     term2 = 0.5 * D * np.log(2 * np.pi)
     term3 = 0.5 * np.sum(np.log(np.square(sigma)))
-    res = -term1 - term2 - term3
+    res = - term1 - term2 - term3
 
     return res
 
-def log_b_m_X(X, myTheta):
+def log_b_m_X(m, X, myTheta):
     ''' Vectorized version of log_b_m_x.
     '''
+    # extract shape and parameters
     T, D = X.shape
-    M = myTheta.mu.shape[0]
-    log_Bs = np.zeros((M, T))
+    # M = myTheta.mu.shape[0]
+    # log_Bs = np.zeros((M, T))
 
-    for m in range(M):
-        mu = myTheta.mu[m]
-        sigma = myTheta.Sigma[m]
+    # for m in range(M):
 
-        term1 = np.sum(np.divide(np.square(X - mu), sigma), axis=1)
-        term2 = 0.5 * D * np.log(2 * np.pi)
-        term3 = 0.5 * np.sum(np.log(np.square(np.prod(sigma))))
-        res = -term1 - term2 - term3
-        log_Bs[m] = res
+    mu = myTheta.mu[m]
+    sigma = myTheta.Sigma[m]
 
-    return log_Bs
+    # apply formula
+    term1 = np.sum(np.divide(np.square(X - mu), sigma), axis=1)
+    term2 = 0.5 * D * np.log(2 * np.pi)
+    term3 = 0.5 * np.sum(np.log(np.square(np.prod(sigma))))
+    res = - term1 - term2 - term3
+    return res
+    # log_Bs[m] = res
+
+    # return log_Bs
 
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
+    # extract shape and parameters
     omega = myTheta.omega
     M = omega.shape[0]
     log_Bs = np.array([log_b_m_x(i, x, myTheta) for i in range(M)])
+
+    # apply formula
     nume = np.log(omega[m, 0]) + log_Bs[m]
     deno = logsumexp(np.log(omega[:, 0]) + log_Bs)
     res = nume - deno
     return res
 
-def log_p_m_X(log_Bs, myTheta):
+def log_ps(log_Bs, myTheta):
+    # extract shape and parameters
     omega = myTheta.omega
+
+    # apply formula
     nume = log_Bs + np.log(omega)
     deno = logsumexp(nume, axis=0)
     log_Ps = nume - deno
@@ -86,7 +98,10 @@ def logLik( log_Bs, myTheta ):
 
         See equation 3 of the handout
     '''
+    # extract shape and parameters
     omega = myTheta.omega
+
+    # apply formula
     res = np.sum(logsumexp(log_Bs + np.log(omega), axis=0))
     return res
   
@@ -106,13 +121,16 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     i = 0
     prev_L = float('-inf')
     improvement = float('inf')
-    log_Bs = np.zeros((M, T))
+    # log_Bs = np.zeros((M, T))
 
     # start loop
     while i <= maxIter and improvement >= epsilon:
         # compute intermediate results
-        log_Bs = log_b_m_X(X, myTheta)
-        log_Ps = log_p_m_X(log_Bs, myTheta)
+        log_Bs = np.zeros((M, T))
+        for m in range(M):
+            log_Bs[m] = log_b_m_X(m, X, myTheta)
+        # log_Bs = log_b_m_X(X, myTheta)
+        log_Ps = log_ps(log_Bs, myTheta)
         
         # compute likelihood
         L = logLik(log_Bs, myTheta)
@@ -156,9 +174,12 @@ def test( mfcc, correctID, models, k=5 ):
     best = float('-inf')
 
     # calculate all likelihood and save the best
+    M, T = models[0].omega.shape[0], mfcc.shape[0]
     for i in range(len(models)):
         model = models[i]
-        log_Bs = log_b_m_X(mfcc, model)
+        log_Bs = np.zeros((M, T))
+        for m in range(M):
+            log_Bs[m, :] = log_b_m_X(m, mfcc, model)
         likelihood = logLik(log_Bs, model)
         all_likelihood[i] = likelihood
 
@@ -169,7 +190,7 @@ def test( mfcc, correctID, models, k=5 ):
     # k best models
     top = np.argsort(-all_likelihood)
 
-    # print to output
+    # print to output, write to file
     with open('gmmLiks.txt', 'a') as f:
         title = models[correctID].name
         print(title)
@@ -182,6 +203,7 @@ def test( mfcc, correctID, models, k=5 ):
             f.write(output)
             f.write('\n')
         f.write('\n')
+        f.close()
 
     return 1 if (bestModel == correctID) else 0
 
@@ -194,7 +216,7 @@ if __name__ == "__main__":
     k = 5  # number of top speakers to display, <= 0 if none
     M = 8
     epsilon = 0.0
-    maxIter = 10
+    maxIter = 20
     # train a model for each speaker, and reserve data for testing
     for subdir, dirs, files in os.walk(dataDir):
         for speaker in dirs:
