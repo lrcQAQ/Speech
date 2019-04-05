@@ -7,7 +7,8 @@ target dimension    Accuracy
     4               1.0
     2               0.84375
 
-Dimensianality reduction can lead to accuracy gets lower but doesn't introduce huge effect.
+Dimensionality reduction doesn't hurt accuracy if the target dimension isn't too small. 
+However, a significantly small target dimension such as 2 can lower the accuracy.
 '''
 
 from a3_gmm import *
