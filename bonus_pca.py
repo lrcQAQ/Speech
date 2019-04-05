@@ -6,6 +6,8 @@ target dimension    Accuracy
     6               0.96875
     4               1.0
     2               0.84375
+
+Dimensianality reduction can lead to accuracy gets lower but doesn't introduce huge effect.
 '''
 
 from a3_gmm import *
