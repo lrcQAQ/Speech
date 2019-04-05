@@ -42,7 +42,24 @@ Less number of speakers lead to worse accuracy. As number of speakers gets small
 Fix M = 8, maxIter = 20, change epsilon to [0, 10, 100, 1000, 10000]
 epsilon 	Accuracy
 0	1.0
-10
-100
-1000
-10000
+10	1.0
+100	1.0
+1000	1.0
+10000	0.96875
+
+Discussion:
+Smaller epsilon lead to better accuracy. This is because smaller epsilon will let EM algorithm to runs more, until better converged. Since epsilon controls the error allowed for EM algorithm.
+
+------------------ Questions ------------------
+1. How might you improve the classification accuracy of the Gaussian mixtures, without adding more
+training data?
+We can decrease epsilon, increase number of speakers, increase M and increase maxIters. And we can make better initialization on theta.
+
+2. When would your classifier decide that a given test utterance comes from none of the trained speaker
+models, and how would your classifier come to this decision?
+Our model will always calculate all likelihoods and find the smallest one, it can't distinguish the case where test utterance comes from non of the trained speaker models. To overcome this, we can set a threshold, when the largest computed likelihood is below such threshold, we classify it to none.
+
+3. Can you think of some alternative methods for doing speaker identification that don¡¯t use Gaussian
+mixtures?
+It's a multiclass classification problem, hence, K-mean can be used, where each cluster of k-mean represents all characteristic of each speakers. 
+We can also use RNN, which have good performance managing audio data.
