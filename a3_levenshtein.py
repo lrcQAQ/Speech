@@ -3,8 +3,8 @@ import numpy as np
 import string
 import re
 
-# dataDir = '/u/cs401/A3/data/'
-dataDir = './subdata/'
+dataDir = '/u/cs401/A3/data/'
+# dataDir = './subdata/'
 
 def Levenshtein(r, h):
     """                                                                         
@@ -40,6 +40,10 @@ def Levenshtein(r, h):
     R[:, 0] = np.arange(n + 1)
     R[0, :] = np.arange(m + 1)
 
+    # initialize backtrace, first row can only go left, first column can only go up
+    B[1:, 0] = 1
+    B[0, 1:] = 2
+
     # statr loop
     for i in range(1, n + 1):
         for j in range(1, m + 1):
@@ -58,11 +62,24 @@ def Levenshtein(r, h):
     # get wer
     wer = R[n, m] / n
 
-    # get nS, nI, nD
-
-
+    # backtrace to get nS, nI, nD
+    nS, nI, nD = 0, 0, 0
+    i, j = n, m
+    while i != 0 or j != 0:
+        if(B[i, j] == 1): # up, delete
+            nD += 1
+            i -= 1
+        elif(B[i, j] == 2): # left, insert
+            nI += 1
+            j -= 1
+        else:
+            # up-left substitute
+            if(R[i, j] == R[i - 1, j - 1] + 1):
+                nS += 1
+            i -= 1
+            j -= 1
     
-    return
+    return wer, nS, nI, nD
 
 
 def preprocess(sent):
@@ -89,68 +106,67 @@ def preprocess(sent):
 
 if __name__ == "__main__":
 
-    # google_wer = []
-    # kaldi_wer = []
+    google_wer = []
+    kaldi_wer = []
 
-    # # discussion file
-    # with open("asrDiscussion.txt", "w+") as f:
+    # discussion file
+    with open("asrDiscussion.txt", "w+") as f:
 
-    #     for subdir, dirs, files in os.walk(dataDir):
-    #         for speaker in dirs:
-    #             # f.write("Processing " + speaker)
-    #             # read in transcript files for such speaker
-    #             trans_path = os.path.join(dataDir, speaker, 'transcripts.txt')
-    #             google_path = os.path.join(dataDir, speaker, 'transcripts.Google.txt')
-    #             kaldi_path = os.path.join(dataDir, speaker, 'transcripts.Kaldi.txt')
-    #             trans = open(trans_path, 'r').readlines()
-    #             google = open(google_path, 'r').readlines()
-    #             kaldi = open(kaldi_path, 'r').readlines()
+        for subdir, dirs, files in os.walk(dataDir):
+            for speaker in dirs:
+                # read in transcript files for such speaker
+                trans_path = os.path.join(dataDir, speaker, 'transcripts.txt')
+                google_path = os.path.join(dataDir, speaker, 'transcripts.Google.txt')
+                kaldi_path = os.path.join(dataDir, speaker, 'transcripts.Kaldi.txt')
+                trans = open(trans_path, 'r').readlines()
+                google = open(google_path, 'r').readlines()
+                kaldi = open(kaldi_path, 'r').readlines()
 
-    #             # for each line, we find its wer
-    #             valid = len(trans) != 0 and (len(google) != 0 or len(kaldi) != 0)
-    #             if(valid):
-    #                 print("===========Processing " + speaker + "===========")
-    #                 lines = min(len(trans), len(google), len(kaldi))
-    #                 for i in range(lines):
-    #                     curr_trans = preprocess(trans[i])
-    #                     print(curr_trans)
-    #                     # calculate result for google
-    #                     if(len(google) != 0):
-    #                         curr_google = preprocess(google[i])
-    #                         Levenshtein(curr_trans, curr_google)
-    #                         # g_wer, g_sub, g_ins, g_del = Levenshtein(curr_trans, curr_google)
-    #                         # google_wer.append(g_wer)
-    #                         # g_res = "Google result: wer " + str(g_wer) + " sub " + str(g_sub) + " ins " + str(g_ins) + " del " + str(g_del)
-    #                         # f.write(g_res)
-    #                         # f.write('\n')
-    #                         # print(g_res)
+                # only process when transcript is nonempty and reference exist
+                valid = len(trans) != 0 and (len(google) != 0 or len(kaldi) != 0)
+                if(valid):
 
-    #                     # # calculate result for kaldi
-    #                     # if(len(kaldi) != 0):
-    #                     #     curr_kaldi = preprocess(kaldi[i])
-    #                     #     k_wer, k_sub, k_ins, k_del = Levenshtein(curr_trans, curr_kaldi)
-    #                     #     google_wer.append(k_wer)
-    #                     #     k_res = "Kaldi result: wer " + str(k_wer) + " sub " + str(k_sub) + " ins " + str(k_ins) + " del " + str(k_del)
-    #                     #     f.write(k_res)
-    #                     #     f.write('\n')
-    #                     #     print(k_res)
+                    lines = min(len(trans), len(google), len(kaldi))
+                    # for each paired lines, we find its wer
+                    for i in range(lines):
 
-    #                 f.write('\n')
-                            
-    #             else:
-    #                 print("===========Empty transcript for " + speaker + "===========")
+                        curr_trans = preprocess(trans[i])
 
-    #             f.write('\n')
+                        # calculate result for google
+                        if(len(google) != 0):
+                            curr_google = preprocess(google[i])
+                            g_wer, g_sub, g_ins, g_del = Levenshtein(curr_trans, curr_google)
+                            google_wer.append(g_wer)
+                            g_res = speaker + " Google " + str(i) + " " + str(g_wer) + " S: " + str(g_sub) + " I: " + str(g_ins) + " D: " + str(g_del)
+                            f.write(g_res)
+                            f.write('\n')
+                            print(g_res)
+
+                        # calculate result for kaldi
+                        if(len(kaldi) != 0):
+                            curr_kaldi = preprocess(kaldi[i])
+                            k_wer, k_sub, k_ins, k_del = Levenshtein(curr_trans, curr_kaldi)
+                            kaldi_wer.append(k_wer)
+                            k_res = speaker + " Kaldi " + str(i) + " " + str(k_wer) + " S: " + str(k_sub) + " I: " + str(k_ins) + " D: " + str(k_del)
+                            f.write(k_res)
+                            f.write('\n')
+                            print(k_res)
+
+                    f.write('\n')
+
+                f.write('\n')
         
-    #     # # report summary of result
-    #     # g_mean, g_std = np.mean(google_wer), np.std(google_wer)
-    #     # k_mean, k_std = np.mean(kaldi_wer), np.std(kaldi_wer)
+        # report summary of result
+        g_mean, g_std = np.mean(google_wer), np.std(google_wer)
+        k_mean, k_std = np.mean(kaldi_wer), np.std(kaldi_wer)
 
-    #     # f.write("===========Summary===========")
-    #     # g_sum = "Google: mean is " + str(g_mean) + ", std is " + str(g_std)
-    #     # k_sum = "Kaldi: mean is " + str(k_mean) + ", std is " + str(k_std)
-    #     # f.write(g_sum)
-    #     # f.write(k_sum)
+        g_sum = "Google: mean is " + str(g_mean) + ", std is " + str(g_std)
+        k_sum = "Kaldi: mean is " + str(k_mean) + ", std is " + str(k_std)
+        f.write(g_sum)
+        f.write('\n')
+        f.write(k_sum)
+        print(g_sum)
+        print(k_sum)
 
-    #     f.close()
+        f.close()
 
