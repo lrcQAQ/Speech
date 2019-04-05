@@ -42,11 +42,7 @@ def log_b_m_X(m, X, myTheta):
     ''' Vectorized version of log_b_m_x.
     '''
     # extract shape and parameters
-    T, D = X.shape
-    # M = myTheta.mu.shape[0]
-    # log_Bs = np.zeros((M, T))
-
-    # for m in range(M):
+    D = X.shape[1]
 
     mu = myTheta.mu[m]
     sigma = myTheta.Sigma[m]
@@ -56,10 +52,8 @@ def log_b_m_X(m, X, myTheta):
     term2 = 0.5 * D * np.log(2 * np.pi)
     term3 = 0.5 * np.sum(np.log(np.square(np.prod(sigma))))
     res = - term1 - term2 - term3
-    return res
-    # log_Bs[m] = res
 
-    # return log_Bs
+    return res
 
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
@@ -129,7 +123,6 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         log_Bs = np.zeros((M, T))
         for m in range(M):
             log_Bs[m] = log_b_m_X(m, X, myTheta)
-        # log_Bs = log_b_m_X(X, myTheta)
         log_Ps = log_ps(log_Bs, myTheta)
         
         # compute likelihood
