@@ -1,6 +1,14 @@
-# reference: https://progur.com/2018/02/how-to-use-mozilla-deepspeech-tutorial.html
+'''
 
+To run the code, need "pip3 install deepspeech"
+"wget https://github.com/mozilla/DeepSpeech/releases/download/v0.1.1/deepspeech-0.1.1-models.tar.gz"
+"tar -xvzf deepspeech-0.1.1-models.tar.gz"
+Tooks a long time.
 
+reference: https://progur.com/2018/02/how-to-use-mozilla-deepspeech-tutorial.html
+reference: https://github.com/mozilla/DeepSpeech#using-the-python-package
+
+'''
 
 from a3_levenshtein import *
 from deepspeech import Model
@@ -11,6 +19,12 @@ import os, fnmatch
 dataDir = './data'
 
 def generate_ds():
+    '''
+    A function that readin pretrained deepspeech model, and use such model to generate deepspeech
+    transcript for each wave file, in ascending order (i.e. "0.wav", "1.wav" ... ). Result is saved
+    in a dictionary, keys are speaker's name, values are a list of string of transcript for each wave
+    file.
+    '''
     model = Model('./models/output_graph.pb', 26, 9, './models/alphabet.txt', 500)
     
     # transcript for all speakers

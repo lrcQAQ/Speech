@@ -31,9 +31,9 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
     mu = myTheta.mu[m]
 
     # apply formula
-    term1 = np.sum(np.divide(np.square(x - mu), sigma), axis=1)
+    term1 = np.sum(np.divide(np.square(x - mu), 2 * sigma), axis=1)
     term2 = 0.5 * D * np.log(2 * np.pi)
-    term3 = 0.5 * np.sum(np.log(np.square(sigma)))
+    term3 = 0.5 * np.sum(np.log(sigma))
     res = - term1 - term2 - term3
 
     return res
@@ -48,9 +48,9 @@ def log_b_m_X(m, X, myTheta):
     sigma = myTheta.Sigma[m]
 
     # apply formula
-    term1 = np.sum(np.divide(np.square(X - mu), sigma), axis=1)
+    term1 = np.sum(np.divide(np.square(X - mu), 2 * sigma), axis=1)
     term2 = 0.5 * D * np.log(2 * np.pi)
-    term3 = 0.5 * np.sum(np.log(np.square(np.prod(sigma))))
+    term3 = 0.5 * np.sum(np.log(np.prod(sigma)))
     res = - term1 - term2 - term3
 
     return res
@@ -65,8 +65,8 @@ def log_p_m_x( m, x, myTheta):
     log_Bs = np.array([log_b_m_x(i, x, myTheta) for i in range(M)])
 
     # apply formula
-    nume = np.log(omega[m, 0]) + log_Bs[m]
-    deno = logsumexp(np.log(omega[:, 0]) + log_Bs)
+    nume = np.log(omega[m]) + log_Bs[m]
+    deno = logsumexp(np.log(omega) + log_Bs)
     res = nume - deno
     return res
 
@@ -107,7 +107,7 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     T = X.shape[0]
     randX = np.random.choice(T, M, replace=False)
     myTheta.Sigma.fill(1)
-    myTheta.omega[:, 0] = 1.0 / M
+    myTheta.omega.fill(1.0 / M)
     for i in range(len(randX)):
         myTheta.mu[i] = X[randX[i]]
     
@@ -115,7 +115,6 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     i = 0
     prev_L = float('-inf')
     improvement = float('inf')
-    # log_Bs = np.zeros((M, T))
 
     # start loop
     while i <= maxIter and improvement >= epsilon:
